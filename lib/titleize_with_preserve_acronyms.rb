@@ -1,13 +1,37 @@
-
-# BC: in AS2.2 Inflector was namespaced in AS
-inflector_module = defined?(Inflector) ? Inflector : ActiveSupport::Inflector
-
-inflector_module.module_eval do
-  def titleize_with_preserve_acronyms(word)
-    acronymns = word.scan(/\b[A-Z\d]+\b/)
-    word = titleize_without_preserve_acronyms(word)
-    acronymns.each {|a| word.gsub!(titleize_without_preserve_acronyms(a), a) }
-    word
+module TitleizeWithPreserveAcronyms
+  module Inflector
+    def self.extended(inflector)
+      inflector.module_eval do
+        alias_method :original_titleize, :titleize
+      end
+    end
+    
+    def titleize word
+      word = inflections.titleize_preserve_acronyms ? titleize_with_preserve_acronyms(word) : original_titleize(word)
+      inflections.titleize_exceptions.each {|e| word.gsub!(original_titleize(e), e) }
+      word
+    end
+    
+    def titleize_with_preserve_acronyms word 
+      acronymns = word.scan(/\b[A-Z\d]+\b/)
+      word = original_titleize word
+      acronymns.each {|a| word.gsub!(original_titleize(a), a) }
+      word
+    end
   end
-  alias_method_chain :titleize, :preserve_acronyms
+  
+  module Inflections
+    attr_accessor :titleize_preserve_acronyms
+    
+    def titleize_exception rule
+      titleize_exceptions << rule
+    end
+    
+    def titleize_exceptions
+      @titleize_exceptions ||= []
+    end
+  end
 end
+
+ActiveSupport::Inflector.extend TitleizeWithPreserveAcronyms::Inflector
+ActiveSupport::Inflector::Inflections.send :include, TitleizeWithPreserveAcronyms::Inflections
