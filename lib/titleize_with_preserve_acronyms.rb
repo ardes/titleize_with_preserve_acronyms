@@ -1,6 +1,6 @@
 module TitleizeWithPreserveAcronyms
   module Inflector
-    def self.extended(inflector)
+    def self.extended inflector
       inflector.module_eval do
         alias_method :original_titleize, :titleize
       end
@@ -8,7 +8,7 @@ module TitleizeWithPreserveAcronyms
     
     def titleize word
       word = inflections.titleize_preserve_acronyms ? titleize_with_preserve_acronyms(word) : original_titleize(word)
-      inflections.titleize_exceptions.each {|e| word.gsub!(original_titleize(e), e) }
+      inflections.titleize_exceptions.each {|titleized, exception| word.gsub!(titleized, exception) }
       word
     end
     
@@ -24,11 +24,11 @@ module TitleizeWithPreserveAcronyms
     attr_accessor :titleize_preserve_acronyms
     
     def titleize_exception rule
-      titleize_exceptions << rule
+      titleize_exceptions[ActiveSupport::Inflector.original_titleize(rule)] = rule
     end
     
     def titleize_exceptions
-      @titleize_exceptions ||= []
+      @titleize_exceptions ||= {}
     end
   end
 end
